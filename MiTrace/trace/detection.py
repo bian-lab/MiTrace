@@ -9,6 +9,7 @@
 """
 
 import cv2
+import time
 
 
 def drawTrackLine(frame, x_lst, y_lst, history):
@@ -74,9 +75,49 @@ def detect_frame(frame):
     return x, y, largest_contour
 
 
+def frame_producer(original_frame, resize, threshold):
+    """
+    Produce a frame for detection from the original frame from video
+
+    Parameters
+    ----------
+    original_frame : 3-D array
+        Frame from video, is a ndarray object
+    resize : List
+        a list to resize the frame into a property size, same with the video_adjust in Detection
+        [x, y, width, height]
+    threshold : int
+        adjust the cv2.inRange threshold
+
+    Returns
+    -------
+    frame : Array
+        Resized frame by roi
+    frame_thresh : 2-D array
+        Frame in threshold range
+    """
+
+    # Grab from top left
+    # Resize the frame of the original frame
+    if resize:
+        frame = original_frame[
+                resize[1]: resize[1] + resize[3],
+                resize[0]: resize[0] + resize[2]
+                ]
+    else:
+        frame = original_frame
+
+    frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    frame_blur = cv2.GaussianBlur(frame_gray, (7, 7), 5, 5)
+    frame_thresh = cv2.inRange(frame_blur, 0, threshold)
+
+    return frame, frame_thresh
+
+
 class Detection:
 
-    def __init__(self, cv_capture, view_adjust=None, track_roi=None, start_frame=0, end_frame=-1):
+    def __init__(self, cv_capture, video_adjust=None, roi_lst=None, start_frame=0, end_frame=-1,
+                 threshold=30):
         """
         Detect the object with white-balance threshold frame by frame, analyze the result
 
@@ -84,22 +125,22 @@ class Detection:
         ----------
         cv_capture : cv2.VideoCapture object
             capture object
-        view_adjust : List
+        video_adjust : List
             [x, y, width, height] for resize the video view
-        track_roi : List
+        roi_lst : List
             [x, y, width, height] for roi
         start_frame : int, optional
             Detect video from which frame. Default is 0
-        end_frame: int, optional
+        end_frame : int, optional
             End frame of frame detection. Default is -1, for no limit
+        threshold : int
+            Threshold for cv2.inRange
 
         """
 
-        if view_adjust is None:
-            view_adjust = [1, 1, 10, 10]
+        if video_adjust is None:
+            video_adjust = [1, 1, 10, 10]
 
-        if track_roi is None:
-            track_roi = [1, 1, 10, 10]
         self.cv_capture = cv_capture
         self.start_frame = start_frame
         self.end_frame = end_frame  # -1 for no limit
@@ -108,45 +149,15 @@ class Detection:
         self.cv_capture.set(cv2.CAP_PROP_POS_FRAMES, self.start_frame)
 
         # Adjust (resize) the view of video, [x, y, width, height], can be select manually
-        self.view_adjust = view_adjust
-        self.track_roi = track_roi
+        self.video_adjust = video_adjust
+        self.roi_lst = roi_lst
 
         # Threshold of object
-        self.threshold = 30
+        self.threshold = threshold
 
         # results position of objects
         self.x_lst = []
         self.y_lst = []
-
-    def frame_producer(self, original_frame):
-        """
-        Produce a frame for detection from the original frame from video
-
-        Parameters
-        ----------
-        original_frame : 3-D array
-            Frame from video, is a ndarray object
-
-        Returns
-        -------
-        frame : Array
-            Resized frame by roi
-        frame_thresh : 2-D array
-            Frame in threshold range
-        """
-
-        # Grab from top left
-        # Resize the frame of the original frame
-        frame = original_frame[
-                self.view_adjust[1]: self.view_adjust[1] + self.view_adjust[3],
-                self.view_adjust[0]: self.view_adjust[0] + self.view_adjust[2]
-                ]
-
-        frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        frame_blur = cv2.GaussianBlur(frame_gray, (7, 7), 5, 5)
-        frame_thresh = cv2.inRange(frame_blur, 0, self.threshold)
-
-        return frame, frame_thresh
 
     def detect_video(self):
         """
@@ -163,6 +174,7 @@ class Detection:
         frame_counter = self.start_frame
 
         ret = self.cv_capture.isOpened()
+        start_time = time.time()
 
         while ret:
             if self.end_frame != -1 and frame_counter >= self.end_frame:
@@ -172,7 +184,8 @@ class Detection:
             # ret is a boolean represent whether the read() function is done successfully
             ret, frame = self.cv_capture.read()
             if ret:
-                frame, frame_thresh = self.frame_producer(original_frame=frame)
+                frame, frame_thresh = frame_producer(original_frame=frame, resize=self.video_adjust,
+                                                     threshold=self.threshold)
                 cv2.imshow('Threshold', frame_thresh)
 
                 x, y, contour = detect_frame(frame=frame_thresh)
@@ -193,11 +206,13 @@ class Detection:
 
                 cv2.imshow('Original video roi', frame)
 
-            if cv2.waitKey(1) & 0xFF == ord('q'):
+            if cv2.waitKey(1) & 0xFF == 27:
                 break
 
         # detection finish
         self.cv_capture.release()
         cv2.destroyAllWindows()
 
-        print(f'Done! Analyzed {self.end_frame - self.start_frame} frames')
+        end_time = time.time()
+
+        return f'Done! Analyzed {len(self.x_lst)} frames, used {round(end_time - start_time, 2)} seconds'

@@ -5,7 +5,7 @@
 @IDE: PyCharm 
 @Author: Xueqiang Wang
 @Date: 2024/1/26 15:22 
-@Description:  
+@Description:  Analysis the results from detection, maily a x_list and y_lst
 """
 import numpy as np
 import pandas as pd
@@ -15,7 +15,7 @@ from scipy.ndimage import gaussian_filter
 
 class Analysis:
 
-    def __init__(self, x_lst=None, y_lst=None, view_adjust=None):
+    def __init__(self, x_lst=None, y_lst=None, video_adjust=None, roi_lst=None):
         """
         Analyze the results of detection, based on the x_lst and y_lst
         1. Result sheet
@@ -28,22 +28,27 @@ class Analysis:
             x coordinates of object
         y_lst : List
             y coordinates of object
+        video_adjust : List
+            resize the video
+        roi_lst : List
+            A list of rois
         """
 
-        if view_adjust is None:
-            view_adjust = [1, 1, 10, 10]
+        if video_adjust is None:
+            video_adjust = [1, 1, 10, 10]
 
-        self.view_adjust = view_adjust
+        self.video_adjust = video_adjust
         self.x_lst = x_lst
         self.y_lst = y_lst
-        self.view_adjust = view_adjust
+        self.roi_lst = roi_lst
+        self.video_adjust = video_adjust
 
     def get_result_sheet(self):
         """
         Get the result sheet from x and y coordinates
         e.g.
-        | x_coordinate | y_coordinate | distance |
-        |     383      |       27     |    0     |
+        | frame | x_coordinate | y_coordinate | distance |
+        |   1   |     383      |      27      |    0     |
 
         Returns
         -------
@@ -56,7 +61,7 @@ class Analysis:
 
         distance_lst = []
         for i in range(1, len(self.x_lst)):
-            # Use euclidean distance
+            # Use Euclidean distance
             distance_lst.append(round(np.sqrt((self.y_lst[i] - self.y_lst[i - 1]) ** 2
                                               + (self.x_lst[i] - self.x_lst[i - 1]) ** 2), 4))
 
@@ -85,8 +90,8 @@ class Analysis:
 
         fig_trace, ax_trace = plt.subplots(nrows=1, ncols=1)
         ax_trace.set_aspect(1)  # Set the x and y coordinate bin equal
-        ax_trace.set_xlim([0, self.view_adjust[2]])
-        ax_trace.set_ylim([0, self.view_adjust[3]])
+        ax_trace.set_xlim([0, self.video_adjust[2]])
+        ax_trace.set_ylim([0, self.video_adjust[3]])
         ax_trace.plot(self.x_lst, self.y_lst, lw=1, c='k')
         # Move the ticks to the top
         ax_trace.tick_params(top=True, labeltop=True, bottom=False, labelbottom=False)
@@ -94,8 +99,8 @@ class Analysis:
 
         fig_heatmap, ax_heatmap = plt.subplots(nrows=1, ncols=1)
         heatmap, x_edge, y_edge = np.histogram2d(self.x_lst, self.y_lst,
-                                                 bins=max(self.view_adjust[2], self.view_adjust[3]),
-                                                 range=[[0, self.view_adjust[2]], [0, self.view_adjust[3]]])
+                                                 bins=max(self.video_adjust[2], self.video_adjust[3]),
+                                                 range=[[0, self.video_adjust[2]], [0, self.video_adjust[3]]])
         heatmap = gaussian_filter(heatmap, 6)
         heatmap = heatmap.T
         heatmap = heatmap[::-1, ]
