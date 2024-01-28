@@ -23,7 +23,7 @@
    </size>
   </property>
   <property name="windowTitle">
-   <string>MainWindow</string>
+   <string>MiTrace</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <widget class="QPushButton" name="RunBt">
@@ -174,6 +174,14 @@
       <height>0</height>
      </size>
     </property>
+    <property name="font">
+     <font>
+      <pointsize>12</pointsize>
+     </font>
+    </property>
+    <property name="editTriggers">
+     <set>QAbstractItemView::DoubleClicked</set>
+    </property>
     <property name="selectionMode">
      <enum>QAbstractItemView::MultiSelection</enum>
     </property>
@@ -221,7 +229,7 @@
      <rect>
       <x>40</x>
       <y>100</y>
-      <width>321</width>
+      <width>151</width>
       <height>31</height>
      </rect>
     </property>
@@ -291,6 +299,9 @@
       <pointsize>12</pointsize>
      </font>
     </property>
+    <property name="keyboardTracking">
+     <bool>false</bool>
+    </property>
     <property name="maximum">
      <number>100000000</number>
     </property>
@@ -312,6 +323,25 @@
     </property>
     <property name="text">
      <string/>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="thresholdBt">
+    <property name="geometry">
+     <rect>
+      <x>210</x>
+      <y>100</y>
+      <width>151</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <family>Microsoft JhengHei UI</family>
+      <pointsize>12</pointsize>
+     </font>
+    </property>
+    <property name="text">
+     <string>Set threshold</string>
     </property>
    </widget>
   </widget>

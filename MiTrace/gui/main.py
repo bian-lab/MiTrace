@@ -147,7 +147,7 @@ class Ui_MiTrace(object):
 
     def retranslateUi(self, MiTrace):
         _translate = QtCore.QCoreApplication.translate
-        MiTrace.setWindowTitle(_translate("MiTrace", "MainWindow"))
+        MiTrace.setWindowTitle(_translate("MiTrace", "MiTrace"))
         self.RunBt.setText(_translate("MiTrace", "Run"))
         self.StopBt.setText(_translate("MiTrace", "Stop"))
         self.label.setText(_translate("MiTrace", "Start Frame:"))

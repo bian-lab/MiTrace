@@ -18,6 +18,7 @@ from MiTrace.gui.image_dialog import Ui_image_dialog
 from MiTrace.gui.main import Ui_MiTrace
 from MiTrace.trace.analysis import Analysis
 from MiTrace.trace.detection import Detection
+from MiTrace.utils.utils import decorate_image
 
 
 class load_gui(QMainWindow, Ui_MiTrace):
@@ -65,7 +66,7 @@ class load_gui(QMainWindow, Ui_MiTrace):
         """
 
         video_path, _ = QFileDialog.getOpenFileName(self, 'Select a video',
-                                                         r'', 'Video File (*.mp4 *.wmv)')
+                                                    r'', 'Video File (*.mp4 *.wmv)')
         if video_path != "":
             self.video_path = video_path
         self.VideoPathEditor.setText(self.video_path)
@@ -129,17 +130,7 @@ class load_gui(QMainWindow, Ui_MiTrace):
         """
 
         image = cv2.cvtColor(self.first_image, cv2.COLOR_BGR2RGB)
-
-        if self.roi_lst:
-            for idx, each in enumerate(self.roi_lst):
-                image = cv2.rectangle(image,
-                                      (each[0], each[1]),
-                                      (each[0] + each[2], each[1] + each[3]),
-                                      color=(255, 255, 255))
-                image = cv2.putText(image,
-                                    self.roi_name_lst[idx],
-                                    (each[0], each[1]), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
-                                    (255, 255, 255), 1)
+        image = decorate_image(image, self.roi_lst, self.roi_name_lst)
         # Show the resized image in the label field
         image = QImage(image.data, image.shape[1], image.shape[0], image.shape[1] * 3,
                        QImage.Format_RGB888)
@@ -223,8 +214,7 @@ class load_gui(QMainWindow, Ui_MiTrace):
         if self.detect_for_add_roi_set_threshold():
             self.image_dialog.show()
             self.image_dialog.show_image(image=self.first_image,
-                                         threshold=self.threshold,
-                                         resize=self.video_adjust)
+                                         threshold=self.threshold)
             self.image_dialog.exec()
             if self.image_dialog.ok:
                 self.threshold = self.image_dialog.threshold
@@ -270,12 +260,14 @@ class load_gui(QMainWindow, Ui_MiTrace):
 
         self.detection = Detection(cv_capture=self.cv_capture, video_adjust=self.video_adjust,
                                    roi_lst=self.roi_lst, start_frame=self.start_frame,
-                                   end_frame=self.end_frame, threshold=self.threshold)
+                                   end_frame=self.end_frame, threshold=self.threshold,
+                                   roi_name_lst=self.roi_name_lst)
 
         info = self.detection.detect_video()
 
         self.analysis = Analysis(x_lst=self.detection.x_lst, y_lst=self.detection.y_lst,
-                                 roi_lst=self.roi_lst, video_adjust=self.video_adjust)
+                                 roi_lst=self.roi_lst, roi_name_lst=self.roi_name_lst,
+                                 video_adjust=self.video_adjust)
 
         self.statusLabel.setText(info)
         self.statusLabel.setStyleSheet('color:green')
@@ -302,6 +294,8 @@ class load_gui(QMainWindow, Ui_MiTrace):
             return
 
         self.analysis.save_results(folder_path=path_)
+        image = decorate_image(self.first_image, self.roi_lst, self.roi_name_lst)
+        cv2.imwrite(filename=f'{path_}/img_for_calibration.png', img=image)
 
 
 class image_dialog(QDialog, Ui_image_dialog):
@@ -326,7 +320,7 @@ class image_dialog(QDialog, Ui_image_dialog):
         self.okBt.clicked.connect(self.ok_press)
         self.cancelBt.clicked.connect(self.cancelEvent)
 
-    def show_image(self, image, threshold, resize):
+    def show_image(self, image, threshold):
         """
         Display the image
 
@@ -336,8 +330,6 @@ class image_dialog(QDialog, Ui_image_dialog):
             image to be shown
         threshold : int
             Same with self.threshold
-        resize : List
-            [x, y, width, height] for resize the image
         Returns
         -------
 
@@ -365,7 +357,7 @@ class image_dialog(QDialog, Ui_image_dialog):
         self.imageLabel.setMinimumHeight(image.shape[0])
 
         image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
-        image = QImage(image.data, image.shape[1], image.shape[0], image.shape[1]*3,
+        image = QImage(image.data, image.shape[1], image.shape[0], image.shape[1] * 3,
                        QImage.Format_RGB888)
         image = QPixmap(image)
         self.imageLabel.setPixmap(image)

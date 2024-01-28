@@ -9,13 +9,13 @@
 """
 import numpy as np
 import pandas as pd
-from matplotlib import pyplot as plt
+import matplotlib.pyplot as plt
 from scipy.ndimage import gaussian_filter
 
 
 class Analysis:
 
-    def __init__(self, x_lst=None, y_lst=None, video_adjust=None, roi_lst=None):
+    def __init__(self, x_lst=None, y_lst=None, video_adjust=None, roi_lst=None, roi_name_lst=None):
         """
         Analyze the results of detection, based on the x_lst and y_lst
         1. Result sheet
@@ -32,6 +32,8 @@ class Analysis:
             resize the video
         roi_lst : List
             A list of rois
+        roi_name_lst : List
+            A list of rois' name
         """
 
         if video_adjust is None:
@@ -41,7 +43,10 @@ class Analysis:
         self.x_lst = x_lst
         self.y_lst = y_lst
         self.roi_lst = roi_lst
+        self.roi_name_lst = roi_name_lst
         self.video_adjust = video_adjust
+        self.result_df = None
+        self.roi_map = None
 
     def get_result_sheet(self):
         """
@@ -71,13 +76,53 @@ class Analysis:
         # distance_lst = np.pad(np.array(distance_lst), (0, len(self.x_lst)-len(distance_lst)))
         # result_df['distance'] = distance_lst
 
-        result_df = pd.DataFrame.from_dict({
+        self.result_df = pd.DataFrame.from_dict({
+            'frame': range(len(self.x_lst)),
             'x_coordinate': self.x_lst,
             'y_coordinate': self.y_lst,
             'distance': distance_lst
         }, orient='index').transpose()
 
-        return result_df
+    def analyze_roi(self):
+        """
+        Use the result sheet and the roi_lst to locate each roi's frame stamp
+        The result sheet will be like
+        | frame | x_coordinate | y_coordinate | distance |        roi       |
+        |   0   |      383     |       27     |     0    | [20, 20, 10, 10] |
+
+        and the roi field can be empty while there are some times the mouse is not
+        in the roi area.
+
+        Returns
+        -------
+
+        """
+
+        self.result_df['roi'] = self.result_df.apply(self.roi_locate, axis=1)
+
+        self.roi_map = pd.DataFrame(columns=['roi name', 'roi position'])
+        self.roi_map['roi name'] = self.roi_name_lst
+        self.roi_map['roi position'] = self.roi_lst
+
+    def roi_locate(self, row):
+        """
+        Pass in a (x, y) coordinate, and determine the position is in the roi list or not.
+        If 'yes' return the roi's name, if 'not' return empty
+
+        Parameters
+        ----------
+        Row of self.result_df
+        Returns
+        -------
+
+        """
+        x = row['x_coordinate']
+        y = row['y_coordinate']
+        for idx, roi in enumerate(self.roi_lst):
+            if roi[0] < x < roi[0]+roi[2] and roi[1] < y < roi[1] + roi[3]:
+                return self.roi_name_lst[idx]
+
+        return ''
 
     def get_trace_plot(self):
         """
@@ -121,9 +166,12 @@ class Analysis:
 
         """
 
-        result_df = self.get_result_sheet()
+        self.get_result_sheet()
+        self.analyze_roi()
         fig_trace, fig_heatmap = self.get_trace_plot()
 
-        result_df.to_csv(f'{folder_path}/results.csv', index=False)
+        with pd.ExcelWriter(f'{folder_path}/result.xlsx') as writer:
+            self.result_df.to_excel(writer, sheet_name='trace_result', index=False)
+            self.roi_map.to_excel(writer, sheet_name='roi_map', index=False)
         fig_trace.savefig(f'{folder_path}/trace_figure.pdf')
         fig_heatmap.savefig(f'{folder_path}/heatmap_figure.pdf')

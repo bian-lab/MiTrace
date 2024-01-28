@@ -11,113 +11,13 @@
 import cv2
 import time
 
-
-def drawTrackLine(frame, x_lst, y_lst, history):
-    """
-    Parameters
-    ----------
-    frame : Array
-        Frame will draw a line on it
-    x_lst, y_lst : List
-        line track positions
-    history : int
-        Define the history positions length
-
-    Returns
-    -------
-
-    """
-    try:
-        for i in range(1, history):
-            if x_lst[-i] != -1 and x_lst[-i - 1] != -1:
-                cv2.line(frame, (x_lst[-i], y_lst[-i]), (x_lst[-i - 1], y_lst[-i - 1]), (255, 255, 255), 2)
-    except IndexError as e:
-        print(e)
-        pass
-
-
-def detect_frame(frame):
-    """
-    Detect a single frame of the video, do tracking and return the x, y of object
-
-    Parameters
-    ----------
-    frame : A frame of the whole video
-
-    Returns
-    -------
-    x : int
-        object's x position
-    y : int
-        object's y position
-    largest_contour : Array
-        contour of object
-
-    """
-
-    contours, hierarchy = cv2.findContours(frame, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    try:
-        largest_contour = max(contours, key=cv2.contourArea)
-        M = cv2.moments(largest_contour)
-        x = int(M["m10"] / M["m00"])
-        y = int(M["m01"] / M["m00"])
-    except ZeroDivisionError as e:
-        print(e)
-        x = -1
-        y = -1
-        largest_contour = []
-    except ValueError as e:
-        print(e)
-        x = -1
-        y = -1
-        largest_contour = []
-
-    return x, y, largest_contour
-
-
-def frame_producer(original_frame, resize, threshold):
-    """
-    Produce a frame for detection from the original frame from video
-
-    Parameters
-    ----------
-    original_frame : 3-D array
-        Frame from video, is a ndarray object
-    resize : List
-        a list to resize the frame into a property size, same with the video_adjust in Detection
-        [x, y, width, height]
-    threshold : int
-        adjust the cv2.inRange threshold
-
-    Returns
-    -------
-    frame : Array
-        Resized frame by roi
-    frame_thresh : 2-D array
-        Frame in threshold range
-    """
-
-    # Grab from top left
-    # Resize the frame of the original frame
-    if resize:
-        frame = original_frame[
-                resize[1]: resize[1] + resize[3],
-                resize[0]: resize[0] + resize[2]
-                ]
-    else:
-        frame = original_frame
-
-    frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    frame_blur = cv2.GaussianBlur(frame_gray, (7, 7), 5, 5)
-    frame_thresh = cv2.inRange(frame_blur, 0, threshold)
-
-    return frame, frame_thresh
+from MiTrace.utils.utils import frame_producer, detect_frame, drawTrackLine, decorate_image
 
 
 class Detection:
 
     def __init__(self, cv_capture, video_adjust=None, roi_lst=None, start_frame=0, end_frame=-1,
-                 threshold=30):
+                 threshold=30, roi_name_lst=None):
         """
         Detect the object with white-balance threshold frame by frame, analyze the result
 
@@ -135,6 +35,8 @@ class Detection:
             End frame of frame detection. Default is -1, for no limit
         threshold : int
             Threshold for cv2.inRange
+        roi_name_lst : List
+            Name of rois
 
         """
 
@@ -151,6 +53,7 @@ class Detection:
         # Adjust (resize) the view of video, [x, y, width, height], can be select manually
         self.video_adjust = video_adjust
         self.roi_lst = roi_lst
+        self.roi_name_lst = roi_name_lst
 
         # Threshold of object
         self.threshold = threshold
@@ -203,6 +106,8 @@ class Detection:
                 cv2.circle(frame, (x, y), 3, (255, 255, 255), -1)
                 cv2.drawContours(frame, contour, -1, (255, 255, 255), 2)
                 drawTrackLine(frame, self.x_lst, self.y_lst, 80)
+
+                frame = decorate_image(frame, self.roi_lst, self.roi_name_lst)
 
                 cv2.imshow('Original video roi', frame)
 
