@@ -7,6 +7,7 @@
 @Date: 2024/1/26 15:20 
 @Description:  
 """
+import os
 import sys
 
 import cv2
@@ -388,10 +389,3 @@ class image_dialog(QDialog, Ui_image_dialog):
         """
         event.ignore()
         self.hide()
-
-
-if __name__ == '__main__':
-    app = QApplication(sys.argv)
-    myWin = load_gui()
-    myWin.show()
-    sys.exit(app.exec_())
