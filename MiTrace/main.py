@@ -10,6 +10,7 @@
 import os
 import sys
 sys.path.append(os.getcwd())
+print(os.getcwd())
 from PyQt5.QtWidgets import QApplication
 from MiTrace.io.load_video import load_gui
 

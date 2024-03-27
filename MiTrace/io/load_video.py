@@ -101,14 +101,25 @@ class load_gui(QMainWindow, Ui_MiTrace):
             if success:
                 self.ResizeVideoBt.setDisabled(True)
                 self.addROIBt.setDisabled(True)
-                self.video_adjust = cv2.selectROI(
-                    "select the area, press ENTER to confirm and ESC for quit",
-                    self.first_image)
-                cv2.destroyWindow("select the area, press ENTER to confirm and ESC for quit")
+                ############# resize #######################
+                # self.video_adjust = cv2.selectROI(
+                #     "select the area, press ENTER to confirm and ESC for quit",
+                #     self.first_image)
+                # cv2.destroyWindow("select the area, press ENTER to confirm and ESC for quit")
                 # Resize the image for roi selection
-                self.first_image = self.first_image[
-                                   self.video_adjust[1]: self.video_adjust[1] + self.video_adjust[3],
-                                   self.video_adjust[0]: self.video_adjust[0] + self.video_adjust[2]]
+                # self.first_image = self.first_image[
+                #                    self.video_adjust[1]: self.video_adjust[1] + self.video_adjust[3],
+                #                    self.video_adjust[0]: self.video_adjust[0] + self.video_adjust[2]]
+                ############# resize end #######################
+
+                ############# self define #######################
+                x = int(self.first_image.shape[1] * 0.2)
+                width = int(self.first_image.shape[0] * 0.8)
+                y = int(self.first_image.shape[1] * 0.2)
+                height = int(self.first_image.shape[0] * 0.8)
+                self.first_image = self.first_image[x: x + width, y: y + height]
+                ############# self define end #######################
+
                 self.cv_capture = cv2.VideoCapture(self.video_path)
 
                 # Remove the roi
@@ -151,10 +162,18 @@ class load_gui(QMainWindow, Ui_MiTrace):
 
             self.ResizeVideoBt.setDisabled(True)
             self.addROIBt.setDisabled(True)
-            roi = cv2.selectROI(
-                "select the area, press ENTER to confirm and ESC for quit",
-                self.first_image)
-            cv2.destroyWindow("select the area, press ENTER to confirm and ESC for quit")
+
+            ############# select roi #######################
+            # roi = cv2.selectROI(
+            #     "select the area, press ENTER to confirm and ESC for quit",
+            #     self.first_image)
+            # cv2.destroyWindow("select the area, press ENTER to confirm and ESC for quit")
+            ############# select roi end #######################
+
+            ############# self define roi #######################
+            roi = (int(self.first_image.shape[1] * 0.4), int(self.first_image.shape[0] * 0.4),
+                   int(self.first_image.shape[1] * 0.2), int(self.first_image.shape[0] * 0.2))
+            ############# self define roi #######################
             if roi != (0, 0, 0, 0):
                 self.roi_lst.append([int(each) for each in roi])
                 self.roi_name_lst.append(str(roi))
